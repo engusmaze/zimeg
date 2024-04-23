@@ -17,7 +17,7 @@ Zimeg is a powerful time library for the Zig programming language that provides 
 Use `zig fetch` command to save the library's URL and its hash to a `build.zig.zon` file.
 
 ```sh
-zig fetch --save https://github.com/engusmaze/zimeg/archive/37592a473304baf2776374fac14f4e52fbb7e505.tar.gz
+zig fetch --save https://github.com/engusmaze/zimeg/archive/408e43e8f83d9c58039a429c094d1cc5fc938920.tar.gz
 ```
 
 ### Adding the Dependency:
