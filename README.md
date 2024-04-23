@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("zimeg", module_sys.module("zimeg"));
+    exe.root_module.addImport("zimeg", zimeg.module("zimeg"));
 }
 ```
 
