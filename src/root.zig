@@ -9,6 +9,11 @@ const nanos_in_hour = nanos_in_minute * 60;
 const nanos_in_day = nanos_in_hour * 24;
 const nanos_in_week = nanos_in_day * 7;
 
+const nanos_in_milliminute = nanos_in_minute / 1000;
+const nanos_in_millihour = nanos_in_hour / 1000;
+const nanos_in_milliday = nanos_in_day / 1000;
+const nanos_in_milliweek = nanos_in_week / 1000;
+
 /// Time represents a duration of time in nanoseconds.
 pub const Time = struct {
     nanos: u64,
@@ -65,6 +70,22 @@ pub const Time = struct {
         return Time{ .nanos = count * nanos_in_week };
     }
 
+    pub inline fn fromMilliminutes(count: u64) Time {
+        return Time{ .nanos = count * nanos_in_milliminute };
+    }
+
+    pub inline fn fromMillihours(count: u64) Time {
+        return Time{ .nanos = count * nanos_in_millihour };
+    }
+
+    pub inline fn fromMillidays(count: u64) Time {
+        return Time{ .nanos = count * nanos_in_milliday };
+    }
+
+    pub inline fn fromMilliweeks(count: u64) Time {
+        return Time{ .nanos = count * nanos_in_milliweek };
+    }
+
     /// Predefined `Time` values for convenience.
     pub const nanosecond = Time.fromNanosecs(1);
     pub const microsecond = Time.fromMicrosecs(1);
@@ -115,6 +136,22 @@ pub const Time = struct {
         return self.nanos / nanos_in_week;
     }
 
+    pub inline fn milliminutes(self: Time) u64 {
+        return (self.nanos / nanos_in_milliminute) % 1000;
+    }
+
+    pub inline fn millihours(self: Time) u64 {
+        return (self.nanos / nanos_in_millihour) % 1000;
+    }
+
+    pub inline fn millidays(self: Time) u64 {
+        return (self.nanos / nanos_in_milliday) % 1000;
+    }
+
+    pub inline fn milliweeks(self: Time) u64 {
+        return (self.nanos / nanos_in_milliweek) % 1000;
+    }
+
     /// Converts the `Time` value to nanoseconds.
     pub inline fn toNanoseconds(self: Time) u64 {
         return self.nanos % 1000;
@@ -155,10 +192,51 @@ pub const Time = struct {
         return self.nanos / nanos_in_week;
     }
 
-    /// Multiplies the `Time` value by the given factor.
-    pub inline fn mul(self: Time, times: u64) Time {
-        return Time{ .nanos = self.nanos * times };
+    pub inline fn toMilliminutes(self: Time) u64 {
+        return self.nanos / nanos_in_milliminute;
     }
+
+    pub inline fn toMillihours(self: Time) u64 {
+        return self.nanos / nanos_in_millihour;
+    }
+
+    pub inline fn toMillidays(self: Time) u64 {
+        return self.nanos / nanos_in_milliday;
+    }
+
+    pub inline fn toMilliweeks(self: Time) u64 {
+        return self.nanos / nanos_in_milliweek;
+    }
+
+    pub fn print(self: Time, writer: anytype) !void {
+        const info = switch (self.nanos) {
+            0...nanos_in_micros - 1 => .{ @as(u64, 0), self.toNanoseconds(), "ns" },
+            nanos_in_micros...nanos_in_millis - 1 => .{ self.nanoseconds(), self.toMicroseconds(), "μs" },
+            nanos_in_millis...nanos_in_second - 1 => .{ self.microseconds(), self.toMilliseconds(), "ms" },
+            nanos_in_second...nanos_in_minute - 1 => .{ self.milliseconds(), self.toSeconds(), "s" },
+            nanos_in_minute...nanos_in_hour - 1 => .{ self.milliminutes(), self.toMinutes(), "minutes" },
+            nanos_in_hour...nanos_in_day - 1 => .{ self.millihours(), self.toHours(), "hours" },
+            nanos_in_day...nanos_in_week - 1 => .{ self.millidays(), self.toDays(), "days" },
+            nanos_in_week...std.math.maxInt(u64) => .{ self.milliweeks(), self.toWeeks(), "weeks" },
+        };
+        var fraction = info[0];
+        const integer = info[1];
+        const suffix = info[2];
+        var digits: [3]u8 = "000".*;
+        var i: usize = 3;
+        while (fraction > 0) {
+            digits[i - 1] = '0' + @as(u8, @intCast(fraction % 10));
+            fraction /= 10;
+            i -= 1;
+        }
+        _ = try writer.print("{d}.{s} {s}", .{ integer, digits[@min(i, 2)..3], suffix });
+    }
+
+    /// Multiplies the `Time` value by the given factor.
+    pub inline fn mul(self: Time, by: u64) Time {
+        return Time{ .nanos = self.nanos * by };
+    }
+    pub const times = mul;
 
     /// Divides the `Time` value by the given divisor.
     pub inline fn div(self: Time, by: u64) Time {
@@ -179,8 +257,8 @@ pub const Time = struct {
     pub const since = sub;
 
     /// Multiplies the `Time` value by the given factor in-place.
-    pub inline fn mulAssign(self: *Time, times: u64) void {
-        self.nanos *= times;
+    pub inline fn mulAssign(self: *Time, by: u64) void {
+        self.nanos *= by;
     }
 
     /// Adds another `Time` value to this `Time` value in-place.
@@ -279,8 +357,8 @@ pub const Timer = struct {
     /// Returns the time left until the end of the timer, or `null` if the timer has already ended.
     pub inline fn timeLeft(self: *Self) ?Time {
         const now = Time.now();
-        return if (self.timestamp.ge(now))
-            self.timestamp.sub(now)
+        return if (self.end.ge(now))
+            self.end.sub(now)
         else
             null;
     }
@@ -344,7 +422,7 @@ pub const Ticker = struct {
 
     /// Advances the ticker to the next tick timestamp.
     pub fn nextTick(self: *Self) void {
-        self.timestamp.addAssign(self.step);
+        self.timer.addTime(self.step);
     }
 
     /// Waits for the next tick to occur by sleeping until the tick timestamp.
@@ -367,7 +445,7 @@ pub const Ticker = struct {
     /// ```
     pub inline fn waitNextTick(self: *Self) void {
         self.timer.waitTilEnded();
-        self.nextTick(self.step); // Switch to next tick
+        self.nextTick(); // Switch to next tick
     }
 };
 
