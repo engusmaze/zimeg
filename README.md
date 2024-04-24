@@ -22,7 +22,7 @@ zig fetch --save https://github.com/engusmaze/zimeg/archive/408e43e8f83d9c58039a
 
 ### Adding the Dependency:
 
-After saving the library's URL, you need to make it importable by your code in the build.zig file. This involves specifying the dependency and adding it to an executable or library.
+After saving the library's URL, you need to make it importable by your code in the `build.zig` file. This involves specifying the dependency and adding it to an executable or library.
 
 ```zig
 pub fn build(b: *std.Build) void {
@@ -40,7 +40,11 @@ pub fn build(b: *std.Build) void {
 Once the dependency is specified in the `build.zig` file, you can import the library into your Zig code using the `@import` directive.
 
 ```zig
-const module_sys = @import("module-sys");
+const zimeg = @import("zimeg");
+
+const Time = zimeg.Time;
+const Timer = zimeg.Timer;
+const Ticker = zimeg.Ticker;
 ```
 
 ## Examples
